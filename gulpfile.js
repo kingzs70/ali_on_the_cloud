@@ -1,4 +1,5 @@
 require('colors');
+var through = require('through2');
 var del = require('del');
 var gulp = require('gulp');
 var uglify = require('gulp-uglify');
@@ -10,11 +11,23 @@ var less = require('gulp-less');
 var path = require('path');
 var sourcemaps = require('gulp-sourcemaps');
 
+var STATIC_HOST = 'http://ali001.b0.upaiyun.com/';
+
 var isBuild = true;
 
 function err(error) {
     console.error('[ERROR]'.red + error.message);
     this.emit('end');
+}
+
+function statichost() {
+    function replace(file, encoding, cb) {
+        file.contents = new Buffer(file.contents.toString()
+                .replace(/src=['"](?!http)\/?([^'^"]+)['"]/g, 'src="'+STATIC_HOST +'$1"')
+                .replace(/href=['"](?!http)\/?([^'^"]+)['"]/g, 'href="'+STATIC_HOST +'$1"'));
+        return cb(null, file);
+    }
+    return through.obj(replace);
 }
 
 
@@ -46,14 +59,20 @@ gulp.task('js', ['clean'], function () {
         .pipe(gulp.dest('build'));
 });
 
+gulp.task("html", ["clean"], function() {
+    return gulp.src(["src/**/*.html"])
+        .pipe(statichost())
+        .pipe(gulp.dest("build"));
+});
+
 gulp.task("copy", ["clean"], function () {
     return gulp.src(["src/**/*.png", "src/**/*.jpg", "src/**/*.jpeg", "src/**/*.gif", "src/**/*.mp3", "src/**/*ogg",
-      "src/**/*.html", "src/**/*.htm", "src/**/*.ttf", "src/**/*.eot", "src/**/*.svg", "src/**/*.less"])
+      "src/**/*.ttf", "src/**/*.eot", "src/**/*.svg", "src/**/*.less", "src/**/*.otf"])
         .pipe(gulp.dest("build"));
 });
 
 
-gulp.task('default', ['clean', 'css', 'js', 'copy']);
+gulp.task('default', ['clean', 'html', 'css', 'js', 'copy']);
 
 gulp.task("watch", ["default"], function () {
     isBuild = false;
